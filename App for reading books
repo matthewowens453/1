@@ -9,9 +9,12 @@ class BookReaderApp(App):
     def build(self):
         self.layout = BoxLayout(orientation='vertical')
         self.current_page = Label(text="")
+        self.night_mode = False
 
         open_button = Button(text="Open Book", on_press=self.open_book)
+        night_mode_button = Button(text="Toggle Night Mode", on_press=self.toggle_night_mode)
         self.layout.add_widget(open_button)
+        self.layout.add_widget(night_mode_button)
         self.layout.add_widget(self.current_page)
 
         return self.layout
@@ -27,8 +30,20 @@ class BookReaderApp(App):
             with open(value[0], 'r') as book_file:
                 book_content = book_file.read()
                 self.current_page.text = book_content
+                self.apply_night_mode()
 
-            # Optionally, you can implement pagination or other features here
+    def toggle_night_mode(self, instance):
+        self.night_mode = not self.night_mode
+        self.apply_night_mode()
+
+    def apply_night_mode(self):
+        if self.night_mode:
+            self.layout.background_color = (0.1, 0.1, 0.1, 1)  # Dark background
+            self.current_page.color = (1, 1, 1, 1)  # White text
+        else:
+            self.layout.background_color = (1, 1, 1, 1)  # Light background
+            self.current_page.color = (0, 0, 0, 1)  # Black text
 
 if __name__ == '__main__':
     BookReaderApp().run()
+
