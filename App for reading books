@@ -4,17 +4,27 @@ from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.popup import Popup
 from kivy.uix.filechooser import FileChooserListView
+from kivy.uix.textinput import TextInput
 
 class BookReaderApp(App):
     def build(self):
         self.layout = BoxLayout(orientation='vertical')
         self.current_page = Label(text="")
         self.night_mode = False
+        self.book_content = ""
+        self.current_page_number = 1
 
         open_button = Button(text="Open Book", on_press=self.open_book)
         night_mode_button = Button(text="Toggle Night Mode", on_press=self.toggle_night_mode)
+        next_page_button = Button(text="Next Page", on_press=self.next_page)
+        prev_page_button = Button(text="Previous Page", on_press=self.prev_page)
+        jump_to_button = Button(text="Jump To Page", on_press=self.jump_to_page)
+
         self.layout.add_widget(open_button)
         self.layout.add_widget(night_mode_button)
+        self.layout.add_widget(next_page_button)
+        self.layout.add_widget(prev_page_button)
+        self.layout.add_widget(jump_to_button)
         self.layout.add_widget(self.current_page)
 
         return self.layout
@@ -28,8 +38,9 @@ class BookReaderApp(App):
     def load_book(self, instance, value, *args):
         if value:
             with open(value[0], 'r') as book_file:
-                book_content = book_file.read()
-                self.current_page.text = book_content
+                self.book_content = book_file.read()
+                self.current_page_number = 1
+                self.update_current_page()
                 self.apply_night_mode()
 
     def toggle_night_mode(self, instance):
@@ -43,6 +54,42 @@ class BookReaderApp(App):
         else:
             self.layout.background_color = (1, 1, 1, 1)  # Light background
             self.current_page.color = (0, 0, 0, 1)  # Black text
+
+    def next_page(self, instance):
+        self.current_page_number += 1
+        self.update_current_page()
+
+    def prev_page(self, instance):
+        if self.current_page_number > 1:
+            self.current_page_number -= 1
+            self.update_current_page()
+
+    def jump_to_page(self, instance):
+        popup_content = BoxLayout(orientation='vertical')
+        input_label = Label(text="Enter page number:")
+        input_field = TextInput()
+        ok_button = Button(text="OK", on_press=lambda x: self.set_page_number(input_field.text))
+        popup_content.add_widget(input_label)
+        popup_content.add_widget(input_field)
+        popup_content.add_widget(ok_button)
+
+        popup = Popup(title='Jump To Page', content=popup_content, size_hint=(0.6, 0.3))
+        popup.open()
+
+    def set_page_number(self, page_number_str):
+        try:
+            page_number = int(page_number_str)
+            if 1 <= page_number <= len(self.book_content.split('\n')):
+                self.current_page_number = page_number
+                self.update_current_page()
+        except ValueError:
+            pass
+
+    def update_current_page(self):
+        lines = self.book_content.split('\n')
+        if 1 <= self.current_page_number <= len(lines):
+            page_content = "\n".join(lines[(self.current_page_number - 1) * 20:self.current_page_number * 20])
+            self.current_page.text = f"Page {self.current_page_number}\n\n{page_content}"
 
 if __name__ == '__main__':
     BookReaderApp().run()
