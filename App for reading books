@@ -5,27 +5,36 @@ from kivy.uix.button import Button
 from kivy.uix.popup import Popup
 from kivy.uix.filechooser import FileChooserListView
 from kivy.uix.textinput import TextInput
+from kivy.uix.scrollview import ScrollView
 
 class BookReaderApp(App):
     def build(self):
         self.layout = BoxLayout(orientation='vertical')
-        self.current_page = Label(text="")
+        self.scroll_view = ScrollView()
+        self.current_page = Label(text="", font_size=18)
         self.night_mode = False
         self.book_content = ""
         self.current_page_number = 1
+        self.bookmarks = set()
 
         open_button = Button(text="Open Book", on_press=self.open_book)
         night_mode_button = Button(text="Toggle Night Mode", on_press=self.toggle_night_mode)
         next_page_button = Button(text="Next Page", on_press=self.next_page)
         prev_page_button = Button(text="Previous Page", on_press=self.prev_page)
         jump_to_button = Button(text="Jump To Page", on_press=self.jump_to_page)
+        bookmark_button = Button(text="Toggle Bookmark", on_press=self.toggle_bookmark)
+        font_size_button = Button(text="Adjust Font Size", on_press=self.adjust_font_size)
+        search_button = Button(text="Search", on_press=self.search)
 
         self.layout.add_widget(open_button)
         self.layout.add_widget(night_mode_button)
         self.layout.add_widget(next_page_button)
         self.layout.add_widget(prev_page_button)
         self.layout.add_widget(jump_to_button)
-        self.layout.add_widget(self.current_page)
+        self.layout.add_widget(bookmark_button)
+        self.layout.add_widget(font_size_button)
+        self.layout.add_widget(search_button)
+        self.layout.add_widget(self.scroll_view)
 
         return self.layout
 
@@ -85,12 +94,74 @@ class BookReaderApp(App):
         except ValueError:
             pass
 
+    def toggle_bookmark(self, instance):
+        if self.current_page_number not in self.bookmarks:
+            self.bookmarks.add(self.current_page_number)
+        else:
+            self.bookmarks.remove(self.current_page_number)
+
+    def adjust_font_size(self, instance):
+        popup_content = BoxLayout(orientation='vertical')
+        input_label = Label(text="Enter font size:")
+        input_field = TextInput()
+        ok_button = Button(text="OK", on_press=lambda x: self.set_font_size(input_field.text))
+        popup_content.add_widget(input_label)
+        popup_content.add_widget(input_field)
+        popup_content.add_widget(ok_button)
+
+        popup = Popup(title='Adjust Font Size', content=popup_content, size_hint=(0.6, 0.3))
+        popup.open()
+
+    def set_font_size(self, font_size_str):
+        try:
+            font_size = float(font_size_str)
+            self.current_page.font_size = font_size
+        except ValueError:
+            pass
+
+    def search(self, instance):
+        popup_content = BoxLayout(orientation='vertical')
+        input_label = Label(text="Enter search term:")
+        input_field = TextInput()
+        ok_button = Button(text="Search", on_press=lambda x: self.perform_search(input_field.text))
+        popup_content.add_widget(input_label)
+        popup_content.add_widget(input_field)
+        popup_content.add_widget(ok_button)
+
+        popup = Popup(title='Search', content=popup_content, size_hint=(0.6, 0.3))
+        popup.open()
+
+    def perform_search(self, search_term):
+        if search_term:
+            search_results = [i + 1 for i, line in enumerate(self.book_content.split('\n')) if search_term.lower() in line.lower()]
+            if search_results:
+                message = f"Search results: {', '.join(map(str, search_results))}"
+            else:
+                message = "No results found."
+            self.show_message_popup("Search Results", message)
+
+    def show_message_popup(self, title, message):
+        popup_content = BoxLayout(orientation='vertical')
+        message_label = Label(text=message)
+        ok_button = Button(text="OK", on_press=lambda x: self.dismiss_popup())
+        popup_content.add_widget(message_label)
+        popup_content.add_widget(ok_button)
+
+        popup = Popup(title=title, content=popup_content, size_hint=(0.6, 0.3))
+        popup.open()
+
+    def dismiss_popup(self):
+        Popup.dismiss(self)
+
     def update_current_page(self):
         lines = self.book_content.split('\n')
         if 1 <= self.current_page_number <= len(lines):
             page_content = "\n".join(lines[(self.current_page_number - 1) * 20:self.current_page_number * 20])
             self.current_page.text = f"Page {self.current_page_number}\n\n{page_content}"
 
-if __name__ == '__main__':
-    BookReaderApp().run()
+            # Check if the current page is bookmarked
+            if self.current_page_number in self.bookmarks:
+                self.current_page.text += "\n\nBookmark: ON"
+            else:
+                self.current_page.text += "\n\nBookmark: OFF"
 
