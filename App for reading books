@@ -8,14 +8,22 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.scrollview import ScrollView
 
 class BookReaderApp(App):
-    def build(self):
-        self.layout = BoxLayout(orientation='vertical')
-        self.scroll_view = ScrollView()
-        self.current_page = Label(text="", font_size=18)
+    def __init__(self, **kwargs):
+        super(BookReaderApp, self).__init__(**kwargs)
+        self.layout = None
+        self.scroll_view = None
+        self.current_page = None
         self.night_mode = False
         self.book_content = ""
         self.current_page_number = 1
         self.bookmarks = set()
+        self.genres = {'Fiction': [], 'Non-Fiction': [], 'Fantasy': [], 'Mystery': [], 'Sci-Fi': []}
+        self.current_genre = 'Fiction'
+
+    def build(self):
+        self.layout = BoxLayout(orientation='vertical')
+        self.scroll_view = ScrollView()
+        self.current_page = Label(text="", font_size=18)
 
         open_button = Button(text="Open Book", on_press=self.open_book)
         night_mode_button = Button(text="Toggle Night Mode", on_press=self.toggle_night_mode)
@@ -25,6 +33,11 @@ class BookReaderApp(App):
         bookmark_button = Button(text="Toggle Bookmark", on_press=self.toggle_bookmark)
         font_size_button = Button(text="Adjust Font Size", on_press=self.adjust_font_size)
         search_button = Button(text="Search", on_press=self.search)
+        view_bookmarks_button = Button(text="View Bookmarks", on_press=self.view_bookmarks)
+        genre_buttons_layout = BoxLayout(orientation='horizontal')
+        for genre in self.genres:
+            genre_button = Button(text=genre, on_press=lambda genre=genre: self.change_genre(genre))
+            genre_buttons_layout.add_widget(genre_button)
 
         self.layout.add_widget(open_button)
         self.layout.add_widget(night_mode_button)
@@ -34,6 +47,8 @@ class BookReaderApp(App):
         self.layout.add_widget(bookmark_button)
         self.layout.add_widget(font_size_button)
         self.layout.add_widget(search_button)
+        self.layout.add_widget(view_bookmarks_button)
+        self.layout.add_widget(genre_buttons_layout)
         self.layout.add_widget(self.scroll_view)
 
         return self.layout
@@ -140,28 +155,11 @@ class BookReaderApp(App):
                 message = "No results found."
             self.show_message_popup("Search Results", message)
 
-    def show_message_popup(self, title, message):
-        popup_content = BoxLayout(orientation='vertical')
-        message_label = Label(text=message)
-        ok_button = Button(text="OK", on_press=lambda x: self.dismiss_popup())
-        popup_content.add_widget(message_label)
-        popup_content.add_widget(ok_button)
+    def view_bookmarks(self, instance):
+        if self.bookmarks:
+            message = "Bookmarks: " + ", ".join(map(str, sorted(self.bookmarks)))
+        else:
+            message = "No bookmarks."
+        self.show_message_popup("Bookmarks", message)
 
-        popup = Popup(title=title, content=popup_content, size_hint=(0.6, 0.3))
-        popup.open()
-
-    def dismiss_popup(self):
-        Popup.dismiss(self)
-
-    def update_current_page(self):
-        lines = self.book_content.split('\n')
-        if 1 <= self.current_page_number <= len(lines):
-            page_content = "\n".join(lines[(self.current_page_number - 1) * 20:self.current_page_number * 20])
-            self.current_page.text = f"Page {self.current_page_number}\n\n{page_content}"
-
-            # Check if the current page is bookmarked
-            if self.current_page_number in self.bookmarks:
-                self.current_page.text += "\n\nBookmark: ON"
-            else:
-                self.current_page.text += "\n\nBookmark: OFF"
-
+    def change_genre(self, genre):
